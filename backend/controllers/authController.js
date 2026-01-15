@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
 
 /* =========================
    HELPER: GENERATE OTP
@@ -8,6 +9,17 @@ import jwt from "jsonwebtoken";
 const generateOtp = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
+
+/* =========================
+   GMAIL TRANSPORTER
+========================= */
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // Gmail App Password
+  },
+});
 
 /* =========================
    REGISTER (SEND OTP)
@@ -34,13 +46,26 @@ export const register = async (req, res) => {
       password: hashedPassword,
       isVerified: false,
       emailOtp: otp,
-      emailOtpExpire: Date.now() + 10 * 60 * 1000, // 10 mins
+      emailOtpExpire: Date.now() + 10 * 60 * 1000, // 10 minutes
+    });
+
+    // ✅ SEND OTP VIA GMAIL
+    await transporter.sendMail({
+      from: `"SmartTask" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "SmartTask Email Verification OTP",
+      html: `
+        <h2>Email Verification</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP expires in 10 minutes.</p>
+      `,
     });
 
     console.log("REGISTER OTP:", otp);
 
     res.status(201).json({
-      message: "OTP generated (check backend logs)",
+      message: "OTP sent to your email",
       email,
     });
   } catch (error) {
@@ -57,11 +82,7 @@ export const verifyRegisterOtp = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (
-      !user ||
-      user.emailOtp !== otp ||
-      user.emailOtpExpire < Date.now()
-    ) {
+    if (!user || user.emailOtp !== otp || user.emailOtpExpire < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
@@ -137,9 +158,22 @@ export const forgotPassword = async (req, res) => {
     user.resetOtpExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
 
+    // ✅ SEND OTP VIA GMAIL
+    await transporter.sendMail({
+      from: `"SmartTask" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "SmartTask Password Reset OTP",
+      html: `
+        <h2>Password Reset</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP expires in 10 minutes.</p>
+      `,
+    });
+
     console.log("RESET OTP:", otp);
 
-    res.json({ message: "OTP generated (check backend logs)" });
+    res.json({ message: "OTP sent to your email" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -154,11 +188,7 @@ export const verifyOtp = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (
-      !user ||
-      user.resetOtp !== otp ||
-      user.resetOtpExpire < Date.now()
-    ) {
+    if (!user || user.resetOtp !== otp || user.resetOtpExpire < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
@@ -177,11 +207,7 @@ export const resetPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (
-      !user ||
-      user.resetOtp !== otp ||
-      user.resetOtpExpire < Date.now()
-    ) {
+    if (!user || user.resetOtp !== otp || user.resetOtpExpire < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
