@@ -1,7 +1,6 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import sendEmail from "../utils/sendEmail.js";
 
 /* =========================
    REGISTER (SEND OTP)
@@ -21,28 +20,22 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 🔐 Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = "123456"; // 🔐 FIXED OTP FOR PROJECT
 
-    const user = await User.create({
+    await User.create({
       name,
       email,
       password: hashedPassword,
       isVerified: false,
       emailOtp: otp,
-      emailOtpExpire: Date.now() + 10 * 60 * 1000, // 10 minutes
+      emailOtpExpire: Date.now() + 10 * 60 * 1000,
     });
 
-    // 📧 Send OTP email
-    await sendEmail(
-      email,
-      "Verify your SmartTask account",
-      `Your verification OTP is ${otp}. It is valid for 10 minutes.`
-    );
+    console.log("REGISTER OTP:", otp);
 
     res.status(201).json({
-      message: "OTP sent to email. Please verify your account.",
-      email: user.email,
+      message: "OTP generated (check backend logs)",
+      email,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -58,12 +51,8 @@ export const verifyRegisterOtp = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (
-      !user ||
-      user.emailOtp !== otp ||
-      user.emailOtpExpire < Date.now()
-    ) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
+    if (!user || user.emailOtp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
     }
 
     user.isVerified = true;
@@ -71,7 +60,7 @@ export const verifyRegisterOtp = async (req, res) => {
     user.emailOtpExpire = null;
     await user.save();
 
-    res.json({ message: "Email verified successfully 🎉" });
+    res.json({ message: "Email verified successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -89,7 +78,6 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // 🚫 BLOCK LOGIN IF EMAIL NOT VERIFIED
     if (!user.isVerified) {
       return res
         .status(403)
@@ -103,7 +91,7 @@ export const login = async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || "secret",
       { expiresIn: "7d" }
     );
 
@@ -133,19 +121,15 @@ export const forgotPassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = "123456"; // 🔐 FIXED OTP
 
     user.resetOtp = otp;
     user.resetOtpExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    await sendEmail(
-      email,
-      "SmartTask Password Reset OTP",
-      `Your OTP is ${otp}. Valid for 10 minutes.`
-    );
+    console.log("RESET OTP:", otp);
 
-    res.json({ message: "OTP sent to email" });
+    res.json({ message: "OTP generated (check backend logs)" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -159,8 +143,8 @@ export const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user || user.resetOtp !== otp || user.resetOtpExpire < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
+    if (!user || user.resetOtp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
     }
 
     res.json({ message: "OTP verified" });
@@ -177,8 +161,8 @@ export const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user || user.resetOtp !== otp || user.resetOtpExpire < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
+    if (!user || user.resetOtp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
