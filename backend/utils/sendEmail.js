@@ -1,40 +1,30 @@
 import nodemailer from "nodemailer";
 
 const sendEmail = async ({ to, subject, text }) => {
-  // 🔍 ENV CHECK (VERY IMPORTANT)
-  console.log("EMAIL_USER:", process.env.EMAIL_USER ? "OK" : "MISSING");
-  console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "OK" : "MISSING");
+  // 1. Create a fake test email account
+  const testAccount = await nodemailer.createTestAccount();
 
+  // 2. Create transporter
   const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Gmail App Password
+      user: testAccount.user,
+      pass: testAccount.pass,
     },
   });
 
-  // 🔍 TRANSPORTER VERIFY
-  transporter.verify((error, success) => {
-    if (error) {
-      console.log("❌ Email transporter error:", error);
-    } else {
-      console.log("✅ Email transporter ready");
-    }
+  // 3. Send mail
+  const info = await transporter.sendMail({
+    from: '"SmartTask" <no-reply@smarttask.com>',
+    to,
+    subject,
+    text,
   });
 
-  try {
-    await transporter.sendMail({
-      from: `"SmartTask" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      text,
-    });
-
-    console.log("✅ Email sent successfully to:", to);
-  } catch (error) {
-    console.log("❌ Failed to send email:", error);
-    throw new Error("Email sending failed");
-  }
+  // 4. VERY IMPORTANT: show preview link in logs
+  console.log("📨 Email Preview URL:", nodemailer.getTestMessageUrl(info));
 };
 
 export default sendEmail;
