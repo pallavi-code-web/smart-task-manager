@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 /* =========================
-   REGISTER (SEND OTP)
+   REGISTER (GENERATE OTP)
 ========================= */
 export const register = async (req, res) => {
   try {
@@ -34,7 +34,7 @@ export const register = async (req, res) => {
     console.log("REGISTER OTP:", otp);
 
     res.status(201).json({
-      message: "OTP generated (check backend logs)",
+      message: "OTP generated successfully (check backend logs)",
       email,
     });
   } catch (error) {
@@ -110,7 +110,7 @@ export const login = async (req, res) => {
 };
 
 /* =========================
-   FORGOT PASSWORD (SEND OTP)
+   FORGOT PASSWORD (GENERATE OTP)
 ========================= */
 export const forgotPassword = async (req, res) => {
   try {
@@ -127,9 +127,9 @@ export const forgotPassword = async (req, res) => {
     user.resetOtpExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    console.log("RESET OTP:", otp);
+    console.log("RESET PASSWORD OTP:", otp);
 
-    res.json({ message: "OTP generated (check backend logs)" });
+    res.json({ message: "OTP generated successfully (check backend logs)" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -147,7 +147,7 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
-    res.json({ message: "OTP verified" });
+    res.json({ message: "OTP verified successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
