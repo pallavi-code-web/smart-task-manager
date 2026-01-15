@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://smart-task-manager-1-mrvz.onrender.com/api",
+  baseURL: "https://smart-task-manager-1-mrvz.onrender.com",
 });
 
 // Attach JWT token automatically
