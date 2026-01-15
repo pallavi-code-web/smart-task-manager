@@ -1,29 +1,34 @@
 import express from "express";
 import {
   register,
+  verifyRegisterOtp,
   login,
   forgotPassword,
   verifyOtp,
   resetPassword,
-  verifyRegisterOtp, // ✅ ADD THIS
 } from "../controllers/authController.js";
-
-console.log("✅ AUTH ROUTES LOADED");
 
 const router = express.Router();
 
-// ✅ TEST ROUTE
+console.log("✅ AUTH ROUTES LOADED");
+
+// ======================
+// TEST ROUTE
+// ======================
 router.get("/test", (req, res) => {
   res.json({ message: "AUTH ROUTES WORKING ✅" });
 });
 
-// 🔐 AUTH ROUTES
+// ======================
+// AUTH
+// ======================
 router.post("/register", register);
-router.post("/verify-register-otp", verifyRegisterOtp); // ✅ NEW ROUTE
-
+router.post("/verify-register-otp", verifyRegisterOtp);
 router.post("/login", login);
 
-// 🔐 FORGOT PASSWORD FLOW
+// ======================
+// FORGOT PASSWORD
+// ======================
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-otp", verifyOtp);
 router.post("/reset-password", resetPassword);
