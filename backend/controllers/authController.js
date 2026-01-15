@@ -3,7 +3,14 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 /* =========================
-   REGISTER (GENERATE OTP)
+   HELPER: GENERATE OTP
+========================= */
+const generateOtp = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+/* =========================
+   REGISTER (SEND OTP)
 ========================= */
 export const register = async (req, res) => {
   try {
@@ -19,8 +26,7 @@ export const register = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    const otp = "123456"; // 🔐 FIXED OTP FOR PROJECT
+    const otp = generateOtp();
 
     await User.create({
       name,
@@ -28,13 +34,13 @@ export const register = async (req, res) => {
       password: hashedPassword,
       isVerified: false,
       emailOtp: otp,
-      emailOtpExpire: Date.now() + 10 * 60 * 1000,
+      emailOtpExpire: Date.now() + 10 * 60 * 1000, // 10 mins
     });
 
     console.log("REGISTER OTP:", otp);
 
     res.status(201).json({
-      message: "OTP generated successfully (check backend logs)",
+      message: "OTP generated (check backend logs)",
       email,
     });
   } catch (error) {
@@ -51,8 +57,12 @@ export const verifyRegisterOtp = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user || user.emailOtp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
+    if (
+      !user ||
+      user.emailOtp !== otp ||
+      user.emailOtpExpire < Date.now()
+    ) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
     user.isVerified = true;
@@ -110,7 +120,7 @@ export const login = async (req, res) => {
 };
 
 /* =========================
-   FORGOT PASSWORD (GENERATE OTP)
+   FORGOT PASSWORD (SEND OTP)
 ========================= */
 export const forgotPassword = async (req, res) => {
   try {
@@ -121,15 +131,15 @@ export const forgotPassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const otp = "123456"; // 🔐 FIXED OTP
+    const otp = generateOtp();
 
     user.resetOtp = otp;
     user.resetOtpExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    console.log("RESET PASSWORD OTP:", otp);
+    console.log("RESET OTP:", otp);
 
-    res.json({ message: "OTP generated successfully (check backend logs)" });
+    res.json({ message: "OTP generated (check backend logs)" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -143,11 +153,16 @@ export const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user || user.resetOtp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
+
+    if (
+      !user ||
+      user.resetOtp !== otp ||
+      user.resetOtpExpire < Date.now()
+    ) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    res.json({ message: "OTP verified successfully" });
+    res.json({ message: "OTP verified" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -161,8 +176,13 @@ export const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user || user.resetOtp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
+
+    if (
+      !user ||
+      user.resetOtp !== otp ||
+      user.resetOtpExpire < Date.now()
+    ) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
