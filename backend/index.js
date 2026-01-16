@@ -16,7 +16,7 @@ const app = express();
 ====================== */
 app.use(
   cors({
-    origin: "*", // frontend (Netlify / localhost)
+    origin: "*", // allow all frontends (Netlify / localhost)
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
@@ -27,7 +27,7 @@ app.use(express.json());
    HEALTH CHECK
 ====================== */
 app.get("/", (req, res) => {
-  res.send("✅ SmartTask API is running");
+  res.send("✅ SmartTask API is running 🚀");
 });
 
 /* ======================
@@ -36,20 +36,20 @@ app.get("/", (req, res) => {
 app.get("/test-email", async (req, res) => {
   try {
     await sendEmail({
-      to: "dappupallavi91@gmail.com", // 🔁 YOUR EMAIL
-      subject: "Brevo SMTP Test",
-      text: "🎉 If you got this email, SMTP is working!",
+      to: "dappupallavi91@gmail.com", // 🔁 change if needed
+      subject: "SmartTask Email Test",
+      text: "🎉 If you received this email, SMTP is working correctly!",
     });
 
-    res.send("✅ Test email sent successfully");
+    res.status(200).send("✅ Test email sent successfully");
   } catch (error) {
-    console.error("❌ Test email failed:", error.message);
+    console.error("❌ Test email failed:", error);
     res.status(500).send("❌ Email failed");
   }
 });
 
 /* ======================
-   ROUTES
+   API ROUTES
 ====================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
