@@ -1,30 +1,34 @@
 import nodemailer from "nodemailer";
 
 const sendEmail = async ({ to, subject, text }) => {
-  // 1. Create a fake test email account
-  const testAccount = await nodemailer.createTestAccount();
+  try {
+    // ✅ BREVO SMTP TRANSPORTER
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,        // smtp-relay.brevo.com
+      port: Number(process.env.SMTP_PORT), // 587
+      secure: false, // MUST be false for port 587
+      auth: {
+        user: process.env.SMTP_USER,      // a02c5xxxx@smtp-brevo.com
+        pass: process.env.SMTP_PASS,      // SMTP password
+      },
+    });
 
-  // 2. Create transporter
-  const transporter = nodemailer.createTransport({
-    host: "smtp.ethereal.email",
-    port: 587,
-    secure: false,
-    auth: {
-      user: testAccount.user,
-      pass: testAccount.pass,
-    },
-  });
+    // ✅ EMAIL OPTIONS
+    const mailOptions = {
+      from: `"SmartTask" <${process.env.FROM_EMAIL}>`,
+      to,
+      subject,
+      text,
+    };
 
-  // 3. Send mail
-  const info = await transporter.sendMail({
-    from: '"SmartTask" <no-reply@smarttask.com>',
-    to,
-    subject,
-    text,
-  });
+    // ✅ SEND MAIL
+    const info = await transporter.sendMail(mailOptions);
 
-  // 4. VERY IMPORTANT: show preview link in logs
-  console.log("📨 Email Preview URL:", nodemailer.getTestMessageUrl(info));
+    console.log("✅ Email sent:", info.messageId);
+  } catch (error) {
+    console.error("❌ Email send error:", error);
+    throw error;
+  }
 };
 
 export default sendEmail;

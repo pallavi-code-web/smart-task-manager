@@ -10,8 +10,6 @@ import {
 
 const router = express.Router();
 
-console.log("✅ AUTH ROUTES LOADED");
-
 // ======================
 // TEST ROUTE
 // ======================

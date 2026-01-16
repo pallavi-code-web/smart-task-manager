@@ -1,15 +1,17 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import sendEmail from "../utils/sendEmail.js";
 
 /* =========================
    HELPER: GENERATE OTP
 ========================= */
-const generateOtp = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
+const generateOtp = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 /* =========================
-   REGISTER (SEND OTP)
+   REGISTER (SEND OTP EMAIL)
 ========================= */
 export const register = async (req, res) => {
   try {
@@ -19,8 +21,8 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "All fields required" });
     }
 
-    const existing = await User.findOne({ email });
-    if (existing) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
       return res.status(409).json({ message: "User already exists" });
     }
 
@@ -36,15 +38,19 @@ export const register = async (req, res) => {
       emailOtpExpire: Date.now() + 10 * 60 * 1000,
     });
 
-    // ✅ OPTION 2: LOG OTP INSTEAD OF EMAIL
-    console.log("📩 REGISTER OTP:", otp);
+    await sendEmail({
+      to: email,
+      subject: "Verify your SmartTask account",
+      text: `Your verification OTP is ${otp}. It expires in 10 minutes.`,
+    });
+
+    console.log("📩 REGISTER OTP SENT:", otp);
 
     res.status(201).json({
-      message: "OTP generated",
-      otp, // ⚠️ only for development
+      message: "OTP sent to your email. Please verify.",
     });
-  } catch (err) {
-    console.error("REGISTER ERROR:", err);
+  } catch (error) {
+    console.error("❌ REGISTER ERROR:", error);
     res.status(500).json({ message: "Registration failed" });
   }
 };
@@ -57,9 +63,10 @@ export const verifyRegisterOtp = async (req, res) => {
     const { email, otp } = req.body;
 
     const user = await User.findOne({ email });
+
     if (
       !user ||
-      user.emailOtp !== otp ||
+      user.emailOtp !== String(otp) ||
       user.emailOtpExpire < Date.now()
     ) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -71,8 +78,8 @@ export const verifyRegisterOtp = async (req, res) => {
     await user.save();
 
     res.json({ message: "Email verified successfully" });
-  } catch (err) {
-    console.error("VERIFY REGISTER OTP ERROR:", err);
+  } catch (error) {
+    console.error("❌ VERIFY REGISTER OTP ERROR:", error);
     res.status(500).json({ message: "OTP verification failed" });
   }
 };
@@ -90,11 +97,11 @@ export const login = async (req, res) => {
     }
 
     if (!user.isVerified) {
-      return res.status(403).json({ message: "Verify email first" });
+      return res.status(403).json({ message: "Please verify email first" });
     }
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -112,8 +119,8 @@ export const login = async (req, res) => {
         email: user.email,
       },
     });
-  } catch (err) {
-    console.error("LOGIN ERROR:", err);
+  } catch (error) {
+    console.error("❌ LOGIN ERROR:", error);
     res.status(500).json({ message: "Login failed" });
   }
 };
@@ -135,15 +142,17 @@ export const forgotPassword = async (req, res) => {
     user.resetOtpExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    // ✅ OPTION 2: LOG OTP
-    console.log("🔑 RESET PASSWORD OTP:", otp);
-
-    res.json({
-      message: "OTP generated",
-      otp, // ⚠️ dev only
+    await sendEmail({
+      to: email,
+      subject: "SmartTask Password Reset OTP",
+      text: `Your password reset OTP is ${otp}. It expires in 10 minutes.`,
     });
-  } catch (err) {
-    console.error("FORGOT PASSWORD ERROR:", err);
+
+    console.log("🔑 RESET OTP SENT:", otp);
+
+    res.json({ message: "OTP sent to your email" });
+  } catch (error) {
+    console.error("❌ FORGOT PASSWORD ERROR:", error);
     res.status(500).json({ message: "OTP generation failed" });
   }
 };
@@ -156,17 +165,18 @@ export const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
 
     const user = await User.findOne({ email });
+
     if (
       !user ||
-      user.resetOtp !== otp ||
+      user.resetOtp !== String(otp) ||
       user.resetOtpExpire < Date.now()
     ) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    res.json({ message: "OTP verified" });
-  } catch (err) {
-    console.error("VERIFY RESET OTP ERROR:", err);
+    res.json({ message: "OTP verified successfully" });
+  } catch (error) {
+    console.error("❌ VERIFY RESET OTP ERROR:", error);
     res.status(500).json({ message: "OTP verification failed" });
   }
 };
@@ -179,9 +189,10 @@ export const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
 
     const user = await User.findOne({ email });
+
     if (
       !user ||
-      user.resetOtp !== otp ||
+      user.resetOtp !== String(otp) ||
       user.resetOtpExpire < Date.now()
     ) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -193,8 +204,8 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     res.json({ message: "Password reset successful" });
-  } catch (err) {
-    console.error("RESET PASSWORD ERROR:", err);
+  } catch (error) {
+    console.error("❌ RESET PASSWORD ERROR:", error);
     res.status(500).json({ message: "Password reset failed" });
   }
 };
