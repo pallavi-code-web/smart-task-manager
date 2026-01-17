@@ -4,99 +4,72 @@ import auth from "../middleware/auth.js";
 
 const router = express.Router();
 
-console.log("🔥 TASK ROUTES FILE LOADED");
-
-// =======================
-// ✅ TEST ROUTE (NO AUTH)
-// =======================
-router.get("/test", (req, res) => {
-  res.json({ message: "Tasks route working ✅" });
-});
-
-// =======================
-// 🔐 CREATE TASK (AUTH)
-// =======================
+/* ================= CREATE TASK ================= */
 router.post("/", auth, async (req, res) => {
   try {
-    const { title, dueDate } = req.body;
+    const { title, dueDate, priority, category } = req.body;
 
-    if (!title) {
+    if (!title?.trim()) {
       return res.status(400).json({ message: "Title required" });
     }
 
     const task = await Task.create({
-      title,
-      dueDate,
-      user: req.user.id, // comes from auth middleware
+      title: title.trim(),
+      dueDate: dueDate ? new Date(dueDate) : null,
+      priority: priority || "Medium",
+      category: category || "General",
+      user: req.user._id,
     });
 
     res.status(201).json(task);
   } catch (err) {
-    console.error("CREATE ERROR:", err.message);
-    res.status(500).json({ message: "Server error" });
+    console.error("CREATE TASK ERROR:", err);
+    res.status(500).json({ message: "Task failed" });
   }
 });
 
-// =======================
-// 🔐 GET ALL TASKS (AUTH)
-// =======================
+/* ================= GET TASKS ================= */
 router.get("/", auth, async (req, res) => {
   try {
-    const tasks = await Task.find({
-      user: req.user.id,
-    }).sort({ createdAt: -1 });
-
+    const tasks = await Task.find({ user: req.user._id }).sort({ createdAt: -1 });
     res.json(tasks);
   } catch (err) {
-    console.error("FETCH ERROR:", err.message);
+    console.error("FETCH ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// =======================
-// 🔐 UPDATE TASK (AUTH)
-// =======================
+/* ================= UPDATE TASK ================= */
 router.put("/:id", auth, async (req, res) => {
   try {
     const task = await Task.findOne({
       _id: req.params.id,
-      user: req.user.id,
+      user: req.user._id,
     });
 
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    task.title = req.body.title ?? task.title;
-    task.completed = req.body.completed ?? task.completed;
-    task.dueDate = req.body.dueDate ?? task.dueDate;
-
+    Object.assign(task, req.body);
     await task.save();
 
     res.json(task);
   } catch (err) {
-    console.error("UPDATE ERROR:", err.message);
+    console.error("UPDATE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// =======================
-// 🔐 DELETE TASK (AUTH)
-// =======================
+/* ================= DELETE TASK ================= */
 router.delete("/:id", auth, async (req, res) => {
   try {
-    const task = await Task.findOneAndDelete({
+    await Task.findOneAndDelete({
       _id: req.params.id,
-      user: req.user.id,
+      user: req.user._id,
     });
 
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
-    res.json({ message: "Task deleted ✅" });
+    res.json({ message: "Task deleted" });
   } catch (err) {
-    console.error("DELETE ERROR:", err.message);
+    console.error("DELETE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

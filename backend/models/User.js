@@ -21,17 +21,26 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    // 🔐 EMAIL VERIFICATION
+    /* ===== REGISTER OTP ===== */
+    otp: {
+      type: String,
+    },
+    otpExpires: {
+      type: Date,
+    },
+
+    /* ===== RESET PASSWORD OTP ===== */
+    resetOtp: {
+      type: String,
+    },
+    resetOtpExpire: {
+      type: Date,
+    },
+
     isVerified: {
       type: Boolean,
       default: false,
     },
-    emailOtp: String,
-    emailOtpExpire: Date,
-
-    // 🔐 FORGOT PASSWORD
-    resetOtp: String,
-    resetOtpExpire: Date,
   },
   { timestamps: true }
 );

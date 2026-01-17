@@ -1,33 +1,34 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import nodemailer from "nodemailer";
 
 const sendEmail = async ({ to, subject, text }) => {
   try {
-    // ✅ BREVO SMTP TRANSPORTER
+    console.log("EMAIL USER:", process.env.EMAIL_USER);
+    console.log("EMAIL PASS:", process.env.EMAIL_PASS ? "Loaded ✅" : "Missing ❌");
+
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,        // smtp-relay.brevo.com
-      port: Number(process.env.SMTP_PORT), // 587
-      secure: false, // MUST be false for port 587
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: {
-        user: process.env.SMTP_USER,      // a02c5xxxx@smtp-brevo.com
-        pass: process.env.SMTP_PASS,      // SMTP password
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 
-    // ✅ EMAIL OPTIONS
-    const mailOptions = {
-      from: `"SmartTask" <${process.env.FROM_EMAIL}>`,
+    await transporter.sendMail({
+      from: `"SmartTask OTP" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
-    };
+    });
 
-    // ✅ SEND MAIL
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log("✅ Email sent:", info.messageId);
+    console.log("✅ OTP sent to:", to);
   } catch (error) {
-    console.error("❌ Email send error:", error);
-    throw error;
+    console.error("❌ Gmail SMTP ERROR:", error);
+    throw new Error("Email failed");
   }
 };
 
