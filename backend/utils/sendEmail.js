@@ -1,31 +1,29 @@
-import dotenv from "dotenv";
-dotenv.config();
+import nodemailer from "nodemailer";
 
-import SibApiV3Sdk from "sib-api-v3-sdk";
-
-// Brevo API setup
-const client = SibApiV3Sdk.ApiClient.instance;
-const apiKey = client.authentications["api-key"];
-apiKey.apiKey = process.env.BREVO_API_KEY;
-
-const tranEmailApi = new SibApiV3Sdk.TransactionalEmailsApi();
-
-const sendEmail = async ({ to, subject, text }) => {
+const sendEmail = async ({ to, subject, html }) => {
   try {
-    await tranEmailApi.sendTransacEmail({
-      sender: {
-        email: "dappupallavi91@gmail.com",   // ✅ your VERIFIED sender
-        name: "SmartTask",
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
-      to: [{ email: to }],
-      subject: subject,
-      textContent: text,
     });
 
-    console.log("✅ OTP sent via Brevo API to:", to);
-  } catch (err) {
-    console.error("❌ Brevo API Error:", err.response?.body || err);
-    throw new Error("Email failed");
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to,
+      subject,
+      html,
+    });
+
+    console.log("✅ Email sent successfully");
+    return true;
+  } catch (error) {
+    console.error("❌ Email failed:", error.message);
+    return false;
   }
 };
 
