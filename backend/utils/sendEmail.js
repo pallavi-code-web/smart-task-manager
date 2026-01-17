@@ -5,21 +5,18 @@ import nodemailer from "nodemailer";
 
 const sendEmail = async ({ to, subject, text }) => {
   try {
-    console.log("EMAIL USER:", process.env.EMAIL_USER);
-    console.log("EMAIL PASS:", process.env.EMAIL_PASS ? "Loaded ✅" : "Missing ❌");
-
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
+      host: "smtp-relay.brevo.com",
+      port: 587,
+      secure: false,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.BREVO_SMTP_USER,
+        pass: process.env.BREVO_SMTP_KEY,
       },
     });
 
     await transporter.sendMail({
-      from: `"SmartTask OTP" <${process.env.EMAIL_USER}>`,
+      from: `"${process.env.BREVO_SENDER_NAME}" <${process.env.BREVO_SENDER_EMAIL}>`,
       to,
       subject,
       text,
@@ -27,7 +24,7 @@ const sendEmail = async ({ to, subject, text }) => {
 
     console.log("✅ OTP sent to:", to);
   } catch (error) {
-    console.error("❌ Gmail SMTP ERROR:", error);
+    console.error("❌ Brevo SMTP ERROR:", error);
     throw new Error("Email failed");
   }
 };
