@@ -24,15 +24,11 @@ export default function Register() {
         password,
       });
 
-      // ✅ SAVE EMAIL FOR OTP PAGE (VERY IMPORTANT)
-      localStorage.setItem(
-        "registerEmail",
-        email.trim().toLowerCase()
-      );
+      // Save email for OTP page
+      localStorage.setItem("registerEmail", email.trim().toLowerCase());
 
-      // ✅ GO TO OTP PAGE
+      alert("OTP sent to your email 📩");
       navigate("/verify-register-otp");
-
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     } finally {
