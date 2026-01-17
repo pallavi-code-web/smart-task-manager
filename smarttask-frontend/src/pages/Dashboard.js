@@ -22,15 +22,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   // =====================
-  // LOGOUT (useCallback FIX)
+  // LOGOUT
   // =====================
   const logout = useCallback(() => {
-    localStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/login");
   }, [navigate]);
 
   // =====================
-  // FETCH TASKS (FIXED)
+  // FETCH TASKS
   // =====================
   const fetchTasks = useCallback(async () => {
     try {
@@ -40,6 +41,8 @@ export default function Dashboard() {
     } catch (err) {
       if (err.response?.status === 401) {
         logout();
+      } else {
+        console.error("Fetch error:", err);
       }
     } finally {
       setLoading(false);
@@ -50,7 +53,8 @@ export default function Dashboard() {
   // AUTH CHECK
   // =====================
   useEffect(() => {
-    if (!localStorage.getItem("token")) {
+    const token = localStorage.getItem("token");
+    if (!token) {
       logout();
     } else {
       fetchTasks();
@@ -64,24 +68,28 @@ export default function Dashboard() {
     e.preventDefault();
     if (!title.trim()) return;
 
-    if (isEditing) {
-      await API.put(`/tasks/${editingTask._id}`, {
-        title,
-        dueDate,
-        priority,
-        category,
-      });
-    } else {
-      await API.post("/tasks", {
-        title,
-        dueDate,
-        priority,
-        category,
-      });
-    }
+    try {
+      if (isEditing && editingTask) {
+        await API.put(`/tasks/${editingTask._id}`, {
+          title,
+          dueDate,
+          priority,
+          category,
+        });
+      } else {
+        await API.post("/tasks", {
+          title,
+          dueDate,
+          priority,
+          category,
+        });
+      }
 
-    resetForm();
-    fetchTasks();
+      resetForm();
+      fetchTasks();
+    } catch (err) {
+      alert(err.response?.data?.message || "Task failed");
+    }
   };
 
   const resetForm = () => {
@@ -97,16 +105,24 @@ export default function Dashboard() {
   // TASK ACTIONS
   // =====================
   const toggleTask = async (task) => {
-    await API.put(`/tasks/${task._id}`, {
-      completed: !task.completed,
-    });
-    fetchTasks();
+    try {
+      await API.put(`/tasks/${task._id}`, {
+        completed: !task.completed,
+      });
+      fetchTasks();
+    } catch (err) {
+      console.error("Toggle error:", err);
+    }
   };
 
   const deleteTask = async (id) => {
-    if (window.confirm("Delete task?")) {
+    if (!window.confirm("Delete task?")) return;
+
+    try {
       await API.delete(`/tasks/${id}`);
       fetchTasks();
+    } catch (err) {
+      console.error("Delete error:", err);
     }
   };
 
@@ -114,10 +130,14 @@ export default function Dashboard() {
   // FILTER TASKS
   // =====================
   const filteredTasks = tasks.filter((task) => {
-    const match = task.title.toLowerCase().includes(search.toLowerCase());
+    const match = task.title
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
     if (filter === "COMPLETED") return task.completed && match;
     if (filter === "PENDING") return !task.completed && match;
     if (filter === "HIGH") return task.priority === "High" && match;
+
     return match;
   });
 
@@ -128,12 +148,14 @@ export default function Dashboard() {
   // UI
   // =====================
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen">
       {/* HEADER */}
       <header className="flex justify-between items-center px-12 py-8">
         <div>
           <h1 className="text-3xl font-bold">SmartTask ✨</h1>
-          <p className="text-sm text-muted">Your personal execution engine</p>
+          <p className="text-sm text-muted">
+            Your personal execution engine
+          </p>
         </div>
         <button onClick={logout} className="neon-btn px-6">
           Logout
@@ -148,9 +170,11 @@ export default function Dashboard() {
           <Stat label="Completed" value={completed} />
         </div>
 
-        {/* CREATE TASK */}
+        {/* CREATE / EDIT */}
         <div className="glass p-8 space-y-6">
-          <h2 className="text-xl font-semibold">Create Task</h2>
+          <h2 className="text-xl font-semibold">
+            {isEditing ? "Edit Task" : "Create Task"}
+          </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
@@ -225,10 +249,14 @@ export default function Dashboard() {
                 key={task._id}
                 className="flex justify-between items-center p-4 rounded-xl hover:bg-white/40"
               >
-                <div onClick={() => toggleTask(task)} className="cursor-pointer">
+                <div
+                  onClick={() => toggleTask(task)}
+                  className="cursor-pointer"
+                >
                   <p
                     className={`font-medium ${
-                      task.completed && "line-through opacity-50"
+                      task.completed &&
+                      "line-through opacity-50"
                     }`}
                   >
                     {task.title}
@@ -244,6 +272,9 @@ export default function Dashboard() {
                       setIsEditing(true);
                       setEditingTask(task);
                       setTitle(task.title);
+                      setDueDate(
+                        task.dueDate ? task.dueDate.slice(0, 10) : ""
+                      );
                       setPriority(task.priority);
                       setCategory(task.category);
                     }}
@@ -251,6 +282,7 @@ export default function Dashboard() {
                   >
                     Edit
                   </button>
+
                   <button
                     onClick={() => deleteTask(task._id)}
                     className="text-red-500"

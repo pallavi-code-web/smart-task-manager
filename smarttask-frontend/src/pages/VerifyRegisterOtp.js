@@ -5,7 +5,7 @@ import API from "../utils/api";
 export default function VerifyRegisterOtp() {
   const navigate = useNavigate();
 
-  // ✅ GET EMAIL FROM STORAGE
+  // ✅ GET EMAIL SAVED DURING REGISTER
   const email = localStorage.getItem("registerEmail");
 
   const [otp, setOtp] = useState("");
@@ -16,30 +16,41 @@ export default function VerifyRegisterOtp() {
     e.preventDefault();
     setError("");
 
+    if (!otp) {
+      setError("OTP is required");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      await API.post("/auth/verify-register-otp", {
-        email,
-        otp,
+      console.log("📨 Verifying OTP:", { email, otp });
+
+      // ✅ CORRECT BACKEND ROUTE
+      const res = await API.post("/auth/verify-register-otp", {
+        email: email.toLowerCase().trim(),
+        otp: otp.trim(),
       });
+
+      console.log("✅ Verify response:", res.data);
 
       // ✅ CLEAN UP
       localStorage.removeItem("registerEmail");
 
-      alert("Account verified successfully 🎉");
+      alert("Email verified successfully 🎉");
       navigate("/login");
-
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid OTP");
+      console.error("❌ Verify OTP error:", err);
+      setError(err.response?.data?.message || "Invalid or expired OTP");
     } finally {
       setLoading(false);
     }
   };
 
+  // ❌ NO EMAIL → BLOCK ACCESS
   if (!email) {
     return (
-      <p className="text-center mt-10">
+      <p className="text-center mt-10 text-red-500">
         Invalid access. Please register again.
       </p>
     );
@@ -54,8 +65,9 @@ export default function VerifyRegisterOtp() {
 
         <form onSubmit={submit} className="space-y-4">
           <input
+            type="text"
             className="neon-input"
-            placeholder="Enter OTP"
+            placeholder="Enter 6-digit OTP"
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
             required

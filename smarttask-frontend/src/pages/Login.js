@@ -22,14 +22,13 @@ export default function Login() {
         password,
       });
 
-      // ✅ Store JWT token
+      // ✅ MUST: store token
       localStorage.setItem("token", res.data.token);
 
-      // ✅ Optional: store user data
-      if (res.data.user) {
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-      }
+      // ✅ Optional but good
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
+      // ✅ Go to dashboard
       navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
@@ -64,6 +63,7 @@ export default function Login() {
 
           <form onSubmit={submit} className="space-y-4">
             <input
+              type="email"
               className="neon-input"
               placeholder="Email address"
               value={email}
@@ -80,7 +80,7 @@ export default function Login() {
               required
             />
 
-            {/* ✅ Forgot Password */}
+            {/* Forgot Password */}
             <div className="text-right">
               <Link
                 to="/forgot-password"
@@ -90,12 +90,16 @@ export default function Login() {
               </Link>
             </div>
 
-            <button className="neon-btn w-full" disabled={loading}>
+            <button
+              type="submit"
+              className="neon-btn w-full"
+              disabled={loading}
+            >
               {loading ? "Logging in..." : "Login →"}
             </button>
           </form>
 
-          {/* ✅ Register */}
+          {/* Register */}
           <p className="mt-6 text-sm text-muted text-center">
             New here?{" "}
             <Link to="/register" className="link-accent">

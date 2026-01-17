@@ -4,6 +4,7 @@ import API from "../utils/api";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -14,12 +15,32 @@ export default function ForgotPassword() {
     setError("");
     setMessage("");
 
+    if (!email) {
+      setError("Email is required");
+      return;
+    }
+
     try {
       setLoading(true);
-      await API.post("/auth/forgot-password", { email });
-      setMessage("OTP sent to your email 📧");
-      navigate("/verify-otp", { state: { email } });
+
+      const normalizedEmail = email.trim().toLowerCase();
+      console.log("📨 Sending forgot-password:", normalizedEmail);
+
+      const res = await API.post("/auth/forgot-password", {
+        email: normalizedEmail,
+      });
+
+      console.log("✅ Backend response:", res.data);
+
+      // ✅ BACKEND DOES NOT SEND success FLAG
+      setMessage(res.data.message || "OTP sent to your email 📧");
+
+      // ✅ ALWAYS navigate on 200 OK
+      navigate("/verify-reset-otp", {
+        state: { email: normalizedEmail },
+      });
     } catch (err) {
+      console.error("❌ Forgot password error:", err);
       setError(err.response?.data?.message || "Failed to send OTP");
     } finally {
       setLoading(false);
@@ -36,6 +57,7 @@ export default function ForgotPassword() {
 
         <form onSubmit={submit} className="space-y-4">
           <input
+            type="email"
             className="neon-input"
             placeholder="Enter your email"
             value={email}
@@ -43,7 +65,7 @@ export default function ForgotPassword() {
             required
           />
 
-          <button className="neon-btn w-full" disabled={loading}>
+          <button type="submit" className="neon-btn w-full" disabled={loading}>
             {loading ? "Sending OTP..." : "Send OTP"}
           </button>
         </form>
